@@ -1,0 +1,65 @@
+class Game {
+    field Board b;
+    field int turn;
+
+    constructor Game new() {
+        let b = Board.new();
+        let turn = 1;
+        return this;
+    }
+
+    method void play() {
+        var int cell, winner;
+        do Screen.clearScreen();
+
+        while (true) {
+            do b.show();
+            do Output.printString("Player ");
+            if (turn = 1) {
+                do Output.printString("1");
+            } else {
+                do Output.printString("2");
+            }
+            do Output.printString(": Make  your move (1-9): ");
+
+            let cell = (Keyboard.readChar() - 48);
+
+            if (b.valid(cell) = 1) {
+                do b.move(cell, turn);
+                let winner = b.win();
+
+                if (winner > 0) {
+                    do Screen.clearScreen();
+                    do b.show();
+                    do Output.printString("Winner: Player ");
+                    if (winner = 1) {
+                        do Output.printString("1");
+                    } else {
+                        do Output.printString("2");
+                    }
+                    return;
+                }
+
+                if (b.full() = 1) {
+                    do Screen.clearScreen();
+                    do b.show();
+                    do Output.printString("Draw");
+                    return;
+                }
+
+                if (turn = 1) {
+                    let turn = 2;
+                } else {
+                    let turn = 1;
+                }
+
+            } else {
+                do Output.printString("Invalid move! Make a valid move...");
+                do Keyboard.readChar();
+            }
+            do Screen.clearScreen();
+        }
+
+        return;
+    }
+}
