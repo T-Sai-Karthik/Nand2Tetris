@@ -1,0 +1,62 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/2/ALU.hdl
+/**
+ * ALU (Arithmetic Logic Unit):
+ * Computes out = one of the following functions:
+ *                0, 1, -1,
+ *                x, y, !x, !y, -x, -y,
+ *                x + 1, y + 1, x - 1, y - 1,
+ *                x + y, x - y, y - x,
+ *                x & y, x | y
+ * on the 16-bit inputs x, y,
+ * according to the input bits zx, nx, zy, ny, f, no.
+ * In addition, computes the two output bits:
+ * if (out == 0) zr = 1, else zr = 0
+ * if (out < 0)  ng = 1, else ng = 0
+ */
+// Implementation: Manipulates the x and y inputs
+// and operates on the resulting values, as follows:
+// if (zx == 1) sets x = 0        // 16-bit constant
+// if (nx == 1) sets x = !x       // bitwise not
+// if (zy == 1) sets y = 0        // 16-bit constant
+// if (ny == 1) sets y = !y       // bitwise not
+// if (f == 1)  sets out = x + y  // integer 2's complement addition
+// if (f == 0)  sets out = x & y  // bitwise and
+// if (no == 1) sets out = !out   // bitwise not
+
+CHIP ALU {
+    IN  
+        x[16], y[16],  // 16-bit inputs        
+        zx, // zero the x input?
+        nx, // negate the x input?
+        zy, // zero the y input?
+        ny, // negate the y input?
+        f,  // compute (out = x + y) or (out = x & y)?
+        no; // negate the out output?
+    OUT 
+        out[16], // 16-bit output
+        zr,      // if (out == 0) equals 1, else 0
+        ng;      // if (out < 0)  equals 1, else 0
+
+    PARTS:
+    Mux16(a=x, b[0..15]=false, sel=zx, out=OUTx1);
+    Not16(in=OUTx1, out=OUTx2);
+    Mux16(a=OUTx1, b=OUTx2, sel=nx, out=OUTx);
+    Mux16(a=y, b[0..15]=false, sel=zy, out=OUTy1);
+    Not16(in=OUTy1, out=OUTy2);
+    Mux16(a=OUTy1, b=OUTy2, sel=ny, out=OUTy);
+    Add16(a=OUTx, b=OUTy, out=OUT1);
+    And16(a=OUTx, b=OUTy, out=OUT2);
+    Mux16(a=OUT2, b=OUT1, sel=f, out=OUTf1);
+    Not16(in=OUTf1, out=OUTf2);
+    Mux16(a=OUTf1, b=OUTf2, sel=no, out=OUTC);
+    RAN(a=OUTC, out1=OUTR1, out2=OUTR2, out=OUTR);
+    Or(a=OUTR, b=false, out=ng);
+    Or8Way(in=OUTR1, out=OUTOR1);
+    Or8Way(in=OUTR2, out=OUTOR2);
+    Or(a=OUTOR1, b=OUTOR2, out=OUTOR);
+    Not(in=OUTOR, out=zr);
+    Mux16(a=OUTf1, b=OUTf2, sel=no, out=out);
+}
