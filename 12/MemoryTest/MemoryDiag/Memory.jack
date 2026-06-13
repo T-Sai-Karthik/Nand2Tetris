@@ -1,0 +1,92 @@
+/**
+ * Memory.jack
+ * Provides basic memory access routines and a simple heap allocator.
+ */
+
+class Memory {
+    static Array base;    // reference to base address 0
+    static int freeList;  // head of free memory blocks
+
+    /** Initializes the memory system. Called once by Sys.init(). */
+    function void init() {
+        let base = Array.new(1);     // temporarily allocate 1 word
+        let base[0] = 0;             // point to physical address 0
+        let freeList = 2048;         // start of heap region
+
+        // create one large free block: size = 16384 - 2048
+        do Memory.poke(freeList, 16384 - 2048);
+        do Memory.poke(freeList + 1, 0);
+        return;
+    }
+
+    /** Reads a word from the given address. */
+    function int peek(int address) {
+        return base[address];
+    }
+
+    /** Writes the given value into the given address. */
+    function void poke(int address, int value) {
+        let base[address] = value;
+        return;
+    }
+
+    /** Allocates a block of the given size and returns its base address. */
+    function Array alloc(int size) {
+        var int prev, curr, currSize, rest;
+
+        let prev = 0;
+        let curr = freeList;
+
+        while (~(curr = 0)) {
+            let currSize = Memory.peek(curr);
+            if (~(currSize < size)) {
+                if (currSize = size) {
+                    // exact fit
+                    if (prev = 0) {
+                        let freeList = Memory.peek(curr + 1);
+                    } else {
+                        do Memory.poke(prev + 1, Memory.peek(curr + 1));
+                    }
+                    return curr + 2;
+                } else {
+                    // split the block
+                    let rest = curr + size + 2;
+
+                    if (~(rest < 16384)) { return null; }
+
+                    do Memory.poke(rest, currSize - size - 2);
+                    do Memory.poke(rest + 1, Memory.peek(curr + 1));
+
+                    if (prev = 0) {
+                        let freeList = rest;
+                    } else {
+                        do Memory.poke(prev + 1, rest);
+                    }
+
+                    do Memory.poke(curr, size);
+                    return curr + 2;
+                }
+            }
+            let prev = curr;
+            let curr = Memory.peek(curr + 1);
+        }
+
+        // no space
+        return null;
+    }
+
+    /** Frees a block previously allocated by alloc(). */
+    function void deAlloc(Array o) {
+        var int block;
+        if (o = null) { return; }
+
+        let block = o - 2;
+
+        // ignore invalid frees
+        if (block < 2048) { return; }
+
+        do Memory.poke(block + 1, freeList);
+        let freeList = block;
+        return;
+    }
+}
